@@ -8,9 +8,9 @@ Done:
 4. Player role assignment
 
 To-do:
-1. Topic and guess system
+1. Custom topic and guess system
 2. Chatroom
 3. Admin system
 4. Frontend design
 5. React frontend instead of vanilla static frontend
-6. Security
+6. Account system & Security
