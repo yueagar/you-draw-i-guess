@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You Draw I Guess</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="mediaqueries.css">
+    <script src="script.js"></script>
+</head>
+<body>
+    <div class="mainUI">
+        <div class="header">
+            <h1>You Draw I Guess</h1>
+            <button id="reconnect">Reconnect</button>
+        </div>
+        <div class="roomsList">
+            <h2>Room List:</h2>
+            <ul id="roomsList"></ul>
+            <button id="createRoom">Create Room</button>
+        </div>
+        <div class="playersList">
+            <h2>Player List:</h2>
+            <ul id="playersList"></ul>
+        </div>
+        <div class="drawingTools">
+            <span>Color</span>
+            <input type="color" id="colorPicker" value="#000000">
+            <span>Size</span>
+            <input type="range" id="sizePicker" min="1" max="10" value="1">
+        </div>
+        <div class="canvasTools">
+            <button id="undo">Undo</button>
+            <button id="redo">Redo</button>
+        </div>
+        <div class="guessBox">
+            <h2>Guess the word:</h2>
+            <input type="text" id="guessInput">
+            <button id="submitGuess">Submit</button>
+        </div>
+        <div class="chatBox">
+            <h2>Chat:</h2>
+            <textarea id="chatHistory" readonly></textarea>
+            <input type="text" id="chatInput">
+            <button id="sendChat">Send</button>
+        </div>
+        <div class="canvasBox">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+</body>
+</html>

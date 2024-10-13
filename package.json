@@ -1,0 +1,20 @@
+{
+  "name": "you-draw-i-guess",
+  "version": "1.0.0",
+  "descrption": "A simple game for drawing and guessing.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "author": "YueAgar_c",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.21.1",
+    "mongodb": "^6.9.0",
+    "ws": "latest"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}
