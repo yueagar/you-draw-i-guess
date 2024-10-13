@@ -136,11 +136,15 @@ class Connection {
                     } else if (type == 4) {
                         let action = reader.readUint8();
                         if (action == 1) {
-                            this.player.currentActionIndex--;
-                            this.player.room.players.forEach(player => player.sendDrawerActions());
+                            if (this.player.currentActionIndex > -1) {
+                                this.player.currentActionIndex--;
+                                this.player.room.players.forEach(player => player.sendDrawerActions());
+                            }
                         } else if (action == 2) {
-                            this.player.currentActionIndex++;
-                            this.player.room.players.forEach(player => player.sendDrawerActions());
+                            if (this.player.currentActionIndex < this.player.actions.length - 1) {
+                                this.player.currentActionIndex++;
+                                this.player.room.players.forEach(player => player.sendDrawerActions());
+                            }
                         }
                     }
                 }

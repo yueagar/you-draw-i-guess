@@ -1,6 +1,6 @@
 {
   "name": "you-draw-i-guess",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "descrption": "A simple game for drawing and guessing.",
   "main": "index.js",
   "scripts": {
