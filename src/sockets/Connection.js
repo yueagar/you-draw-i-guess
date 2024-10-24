@@ -20,7 +20,7 @@ class Connection {
             case 1: // new player joining confirmed
                 if (reader.readUint8() == 99) { // 99 = valid public join pass
                     this.player.id = this.listener.playerIdCount++;
-                    console.log(`Player ${this.player.id} connected.`);
+                    //console.log(`Player ${this.player.id} connected.`);
                     //this.player.role = 3; // role = admin + drawer, for debugging
                     const writer = new Writer(1 + 4);
                     writer.writeUint8(1);
@@ -42,39 +42,41 @@ class Connection {
                         const room = new Room(this.listener.roomIdCount++, this.listener);
                         this.listener.rooms.push(room);
                         this.player.room = room;
-                        this.player.role = 3; // role = admin + drawer
                         room.players.push(this.player);
-                        console.log(`Player ${this.player.id} created room ${room.id}.`);
+                        //console.log(`Player ${this.player.id} created room ${room.id}.`);
                         this.player.sendRoomId();
                         this.listener.sendRoomUpdate();
+                        room.sendUpdate();
+                        this.player.role = 3; // role = admin + drawer
                     }
                 } else if (action == 2) { // join room
                     const room = this.listener.rooms.find(room => room.id == roomId);
                     if (room) {
                         if (room.players.includes(this.player)) {
-                            const writer = new Writer(1 + 4);
+                            const writer = new Writer(1 + 1);
                             writer.writeUint8(2);
-                            writer.writeInt32(-1);
+                            writer.writeUint8(1);
                             this.ws.send(writer.buffer);
                         } else if (room.players.length >= 8) {
-                            const writer = new Writer(1 + 4);
+                            const writer = new Writer(1 + 1);
                             writer.writeUint8(2);
-                            writer.writeInt32(-2);
+                            writer.writeUint8(2);
                             this.ws.send(writer.buffer);
                         } else {
                             if (this.player.room) {
-                                this.player.room.kick(this.player, -3);
+                                this.player.room.kick(this.player, 3);
                             }
                             room.players.push(this.player);
                             this.player.room = room;
-                            console.log(`Player ${this.player.id} joined room ${room.id}.`);
+                            //console.log(`Player ${this.player.id} joined room ${room.id}.`);
                             this.player.onJoinRoom();
                             this.listener.sendRoomUpdate();
+                            room.sendUpdate();
                         };
                     } else return this.ws.close();
                 } else if (action == 3) {
                     if (this.player.room) {
-                        this.player.room.kick(this.player, -3);
+                        this.player.room.kick(this.player, 3);
                         this.player.normalize();
                         this.listener.sendRoomUpdate();
                     }
@@ -122,16 +124,16 @@ class Connection {
                     if (type == 1) { // color
                         let color = reader.readUint32();
                         if (color < 0 || color > 0xFFFFFF) return this.ws.close();
-                        console.log(`Player ${this.player.id} picked color ${color}.`);
+                        //console.log(`Player ${this.player.id} picked color ${color}.`);
                         this.player.pickedColor = color;
                     } else if (type == 2) { // size
                         let size = reader.readUint8();
                         if (size < 1 || size > 10) return this.ws.close();
-                        console.log(`Player ${this.player.id} picked size ${size}.`);
+                        //console.log(`Player ${this.player.id} picked size ${size}.`);
                         this.player.pickedSize = size;
                     } else if (type == 3) {
                         let topic = reader.readString();
-                        console.log(`Player ${this.player.id} picked topic ${topic}.`);
+                        //console.log(`Player ${this.player.id} picked topic ${topic}.`);
                         this.player.pickedTopic = topic;
                     } else if (type == 4) {
                         let action = reader.readUint8();
@@ -149,6 +151,49 @@ class Connection {
                     }
                 }
                 break;
+            case 5: // manage related
+                break;
+            case 6: // msg related
+                if (this.player.id < 0) return this.ws.close();
+                const type = reader.readUint8();
+                if (this.player.room) {
+                    const message = reader.readString();
+                    if (type == 1) {
+                        //console.log(`Player ${this.player.id} sent message: ${message}.`);
+                        this.player.room.sendMsgToAll(message, 1, this.player.id);
+                    } else if (type == 2) {
+                        if (this.player.role & 1) {
+                            /*const drawerGuessMessage = `You can't guess as a drawer.`;
+                            const writer = new Writer(1 + 1 + drawerGuessMessage.length);
+                            writer.writeUint8(6);
+                            writer.writeUint8(2);
+                            writer.writeString(drawerGuessMessage);
+                            this.ws.send(writer.buffer);*/
+                            if (this.player.pickedTopic) {
+                                this.sendMsg("You have already picked a topic.", 2);
+                            } else {
+                                //console.log(`Player ${this.player.id} picked topic: ${message}.`);
+                                this.player.pickedTopic = message;
+                            }
+                        } else {
+                            //console.log(`Player ${this.player.id} guessed: ${message}.`);
+                            if (!this.player.room.drawer.pickedTopic) {
+                                this.sendMsg(`The drawer hasn't picked a topic yet.`, 2);
+                            } else if (this.player.room.drawer.pickedTopic.toLowerCase() == message.toLowerCase()) {
+                                //console.log(`Player ${this.player.id} guessed correctly.`);
+                                this.player.room.sendMsgToAll(`${this.player.name} guessed correctly.`, 2);
+                                this.player.room.drawer.score++;
+                                this.player.score++;
+                                this.player.room.skip();
+                            } else {
+                                this.sendMsg(`You guessed incorrectly.`, 2);
+                            }
+                        }
+                    }
+                } else {
+                    this.sendMsg(`You can't ${type == 1 ? "chat" : "guess"} outside of a room.`, 2);
+                }
+                break;
             default:
                 this.ws.close();
                 break;
@@ -157,6 +202,15 @@ class Connection {
 
     onClose() {
         this.listener.onDisconnection(this);
+    }
+
+    sendMsg(message, type, senderId) {
+        const writer = new Writer(1 + 1 + message.length);
+        writer.writeUint8(6);
+        writer.writeUint8(type);
+        type == 1 && !isNaN(senderId) && writer.writeUint32(senderId);
+        writer.writeString(message);
+        this.ws.send(writer.buffer);
     }
 }
 

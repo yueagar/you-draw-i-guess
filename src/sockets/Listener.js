@@ -38,6 +38,7 @@ class Listener {
                 res.json(room.players.map(player => {
                     return {
                         ...player,
+                        _pickedTopic: "",
                         connection: player.id,
                         room: player.room.id,
                         actions: player.actions.map(action => ({ "color": action.color, "size": action.size, "points": action.points }))
@@ -69,13 +70,13 @@ class Listener {
         this.connections.push(new Connection(this, ws));
     }
     onDisconnection(connection) {
-        console.log(`Player ${connection.player.id} disconnected.`);
+        //console.log(`Player ${connection.player.id} disconnected.`);
         this.connections.splice(this.connections.indexOf(connection), 1);
-        connection.player.room?.kick(connection.player, -3);
+        connection.player.room?.kick(connection.player, 3);
         this.sendRoomUpdate();
     }
     sendRoomUpdate() {
-        this.connections.forEach(connection => connection.ws.send(Buffer.from([0])));
+        this.connections.forEach(connection => connection.ws.send(Buffer.from([0, 1])));
     }
 }
 

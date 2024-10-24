@@ -4,12 +4,12 @@ class Player {
     constructor(id, connection) {
         this.id = id;
         this.connection = connection;
-        this.name = "Anonymous Player " + (~~(9999 * Math.random()) + 1);
+        this.name = "Guest" + (~~(9999 * Math.random()) + 1);
         this.room = null;
         this._role = 0; // admin(2nd bit), drawer(1st bit)
         this._pickedColor = 0;
         this._pickedSize = 1;
-        this._pickedTopic = "to be decided";
+        this._pickedTopic = null;
         //this.x = 0;
         //this.y = 0;
         this.clicked = false;
@@ -34,8 +34,9 @@ class Player {
         this.sendDrawerInfo();
     }
     sendRoomId() {
-        const writer = new Writer(1 + 4);
+        const writer = new Writer(1 + 1 + 4);
         writer.writeUint8(2);
+        writer.writeUint8(0);
         writer.writeUint32(this.room.id);
         this.connection.ws.send(writer.buffer);
     }
@@ -60,17 +61,19 @@ class Player {
         this.connection.ws.send(writer.buffer);
     }
     sendDrawerTopic() {
-        const writer = new Writer(1 + 1 + this.pickedTopic.length + 1);
-        writer.writeUint8(4);
-        writer.writeUint8(3);
-        writer.writeString(this.room.drawer.pickedTopic);
-        this.connection.ws.send(writer.buffer);
+        if (this.room.drawer.pickedTopic) {
+            const writer = new Writer(1 + 1 + this.pickedTopic.length + 1);
+            writer.writeUint8(4);
+            writer.writeUint8(3);
+            writer.writeString(this.room.drawer.pickedTopic.replace(/\S/g, "_"));
+            this.connection.ws.send(writer.buffer);
+        }
     }
     sendDrawerActions() {
         const writer = new Writer();
         writer.writeUint8(4);
         writer.writeUint8(4);
-        writer.writeInt16(this.room.drawer.currentActionIndex);
+        writer.writeUint16(this.room.drawer.currentActionIndex + 1);
         writer.writeUint16(this.room.drawer.actions.length);
         this.room.drawer.actions.forEach(action => {
             writer.writeUint32(action.color);
@@ -88,6 +91,9 @@ class Player {
     }
     set role(role) {
         this._role = role;
+        if (role & 1) {
+            this.pickedTopic = null;
+        }
         const writer = new Writer(1 + 1 + 1);
         writer.writeUint8(5);
         writer.writeUint8(1);
@@ -121,11 +127,14 @@ class Player {
     }
     set pickedTopic(topic) {
         this._pickedTopic = topic;
-        const writer = new Writer(1 + 1 + topic.length);
-        writer.writeUint8(4);
-        writer.writeUint8(3);
-        writer.writeString(topic);
-        this.room.sendToAll(writer.buffer);
+        if (topic) {
+            const obfuscated = topic.replace(/\S/g, "_");
+            const writer = new Writer(1 + 1 + obfuscated.length);
+            writer.writeUint8(4);
+            writer.writeUint8(3);
+            writer.writeString(obfuscated);
+            this.room.sendToAll(writer.buffer);
+        }
     }
 }
 

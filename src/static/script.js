@@ -85,15 +85,25 @@ class Drawer {
 
 class Interface {
     static init() {
+        // server-related
         this.reconnectButton = document.getElementById("reconnect");
         this.createRoomButton = document.getElementById("createRoom");
         this.refreshListButton = document.getElementById("refreshList");
         this.roomsList = document.getElementById("roomsList");
         this.playersList = document.getElementById("playersList");
+        // draw-related
         this.colorPicker = document.getElementById("colorPicker");
         this.sizePicker = document.getElementById("sizePicker");
         this.undoButton = document.getElementById("undo");
         this.redoButton = document.getElementById("redo");
+        // chat-related
+        this.chatHistory = document.getElementById("chatHistory");
+        this.chatInput = document.getElementById("chatInput");
+        this.sendChatButton = document.getElementById("sendChat");
+        // guess-related
+        this.guessHeader = document.getElementById("guessHeader");
+        this.guessInput = document.getElementById("guessInput");
+        this.submitGuessButton = document.getElementById("submitGuess");
         this.addEventListeners();
     }
     static addEventListeners() {
@@ -113,6 +123,28 @@ class Interface {
         this.redoButton.addEventListener("click", () => {
             SendActions.sendDraw(4, 2);
         });
+        this.sendChatButton.addEventListener("click", () => {
+            if (this.chatInput.value) {
+                SendActions.sendMsg(this.chatInput.value, 1);
+                this.chatInput.value = "";
+            }
+        });
+        this.chatInput.addEventListener("keydown", event => {
+            if (event.key == "Enter") {
+                this.sendChatButton.click();
+            }
+        });
+        this.submitGuessButton.addEventListener("click", () => {
+            if (this.guessInput.value) {
+                SendActions.sendMsg(this.guessInput.value, 2);
+                this.guessInput.value = "";
+            }
+        });
+        this.guessInput.addEventListener("keydown", event => {
+            if (event.key == "Enter") {
+                this.submitGuessButton.click();
+            }
+        });
     }
     static onReconnect() {
         Connection.connect();
@@ -120,9 +152,10 @@ class Interface {
     static onCreateRoom() {
         SendActions.sendRoom(1);
     }
-    static onRefreshList() {
-        this.clearList();
-        fetch("/rooms").then(response => response.json()).then(data => {
+    static onRefreshList(type) {
+        //console.log(`Refreshed list type ${type}.`);
+        this.clearList(type);
+        type & 1 && fetch("/rooms").then(response => response.json()).then(data => {
             data.forEach(room => {
                 const li = document.createElement("li");
                 const btn = document.createElement("button");
@@ -137,8 +170,10 @@ class Interface {
                 this.roomsList.appendChild(li);
             })
         });
-        fetch("/players?roomId=" + Connection.roomId).then(response => response.json()).then(data => {
+        type & 2 && fetch("/players?roomId=" + Connection.roomId).then(response => response.json()).then(data => {
+            Connection.roomPlayers = [];
             data.forEach(player => {
+                Connection.roomPlayers.push(player);
                 const li = document.createElement("li");
                 li.style.textDecoration = player.id == Connection.playerId ? "underline" : "none";
                 li.style.color = player._role & 1 ? "red" : "black";
@@ -148,13 +183,31 @@ class Interface {
             });
         });
     }
-    static clearList() {
-        while (this.roomsList.firstChild) {
-            this.roomsList.removeChild(this.roomsList.firstChild);
+    static clearList(type) {
+        if (type & 1) {
+            while (this.roomsList.firstChild) {
+                this.roomsList.removeChild(this.roomsList.firstChild);
+            }
         }
-        while (this.playersList.firstChild) {
-            this.playersList.removeChild(this.playersList.firstChild);
+        if (type & 2) {
+            while (this.playersList.firstChild) {
+                this.playersList.removeChild(this.playersList.firstChild);
+            }
         }
+    }
+    static addChatMessage(sender, message) {
+        const dateObj = new Date();
+        const timeString = dateObj.getHours().toString().padStart(2, "0") + ":" + dateObj.getMinutes().toString().padStart(2, "0") + ":" + dateObj.getSeconds().toString().padStart(2, "0");
+        this.chatHistory.textContent += `[${timeString}] ${sender}: ${message}\n`;
+        this.chatHistory.scrollTop = this.chatHistory.scrollHeight;
+    }
+    static clearChat() {
+        this.chatHistory.textContent = "";
+    }
+    static toggleGuessBox(role) {
+        this.guessHeader.textContent = role & 1 ? "Decide the topic:" : "Guess the word:";
+        this.guessInput.placeholder = role & 1 ? "Input your topic here." : "Input your guess here.";
+        //this.submitGuessButton.textContent = role & 1 ? "Submit Topic" : "Submit Guess";
     }
 }
 
@@ -164,6 +217,7 @@ class Connection {
         this.connected = false;
         this.playerId = -1;
         this.roomId = -1;
+        this.roomPlayers = [];
         this.role = 0;
         this.topic = "to be decided";
         this.connect();
@@ -183,12 +237,14 @@ class Connection {
         this.connected = true;
         SendActions.sendConnected();
         console.log("Connected to the server.");
+        Interface.addChatMessage("System", "Connected to the server.");
     }
     static onClose() {
         this.connected = false;
         console.log("Disconnected from the server.");
+        Interface.addChatMessage("System", "Disconnected from the server.");
         Drawer.clear();
-        Interface.clearList();
+        Interface.clearList(3);
     }
     static onError(error) {
         console.error(error);
@@ -215,7 +271,7 @@ class MessageReader {
         const opcode = data.readUInt8();
         switch (opcode) {
             case 0:
-                this.onUpdateList();
+                this.onUpdateList(data);
                 break;
             case 1:
                 this.onConnected(data);
@@ -232,42 +288,51 @@ class MessageReader {
             case 5:
                 this.onManage(data);
                 break;
+            case 6:
+                this.onChat(data);
+                break;
             default:
                 console.error("Unknown opcode: " + opcode);
                 break;
         }
     }
-    static onUpdateList() {
-        Interface.onRefreshList();
+    static onUpdateList(data) {
+        const type = data.readUInt8();
+        Interface.onRefreshList(type);
     }
     static onConnected(data) {
         Connection.playerId = data.readUInt32();
         console.log("Player ID: " + Connection.playerId);
-        Interface.onRefreshList();
+        Interface.addChatMessage("Server", `Your Player ID is ${Connection.playerId}.`);
+        Interface.onRefreshList(1);
     }
     static onRoom(data) {
-        const id = data.readInt32();
-        if (id >= 0) {
-            Connection.roomId = id;
-            console.log("Room ID: " + Connection.roomId);
-        } else {
-            switch (id) {
-                case -1:
-                    console.log("You are already in a room.");
-                    break;
-                case -2:
-                    console.log("Room is full.");
-                    break;
-                case -3:
-                    console.log("You left the room.");
-                    Connection.roomId = -1;
-                    Drawer.clear();
-                    Drawer.color = "#000000";
-                    Drawer.size = 1;
-                    break;
-                default:
-                    break;
-            }
+        const status = data.readUInt8();
+        switch (status) {
+            case 0:
+                const id = data.readUInt32();
+                Connection.roomId = id;
+                console.log("Room ID: " + Connection.roomId);
+                Interface.addChatMessage("Server", `You joined room ${Connection.roomId}.`);
+                break;
+            case 1:
+                console.log("You are already in a room.");
+                Interface.addChatMessage("Server", "You are already in a room.");
+                break;
+            case 2:
+                console.log("Room is full.");
+                Interface.addChatMessage("Server", "The room is now full.");
+                break;
+            case 3:
+                console.log("You left the room.");
+                Interface.addChatMessage("Server", "You left the room.");
+                Connection.roomId = -1;
+                Drawer.clear();
+                Drawer.color = "#000000";
+                Drawer.size = 1;
+                break;
+            default:
+                break;
         }
     }
     static onMouse(data) {
@@ -290,8 +355,9 @@ class MessageReader {
             Drawer.size = data.readUInt8();
         } else if (type == 3) {
             Connection.topic = data.readUTF8String();
+            Interface.addChatMessage("Server", `The drawer has picked a topic. Hint: ${Connection.topic}.`);
         } else if (type == 4) {
-            Drawer.currentActionIndex = data.readInt16();
+            Drawer.currentActionIndex = data.readUInt16() - 1;
             const actionsLength = data.readUInt16();
             Drawer.actions = [];
             for (let i = 0; i < actionsLength; i++) {
@@ -320,10 +386,20 @@ class MessageReader {
                     !(Connection.role & role & 1) && Drawer.clear();
                     SendActions.sendDraw(1, parseInt(Interface.colorPicker.value.slice(1), 16));
                     SendActions.sendDraw(2, Interface.sizePicker.value);
+                } else if (Connection.role & 1 && !(role & 1)) {
+                    Drawer.clear();
                 }
                 Connection.role = role;
+                Interface.toggleGuessBox(role);
             }
         }
+    }
+    static onChat(data) {
+        const type = data.readUInt8();
+        const senderId = type == 1 ? data.readUInt32() : -1;
+        const sender = senderId > -1 ? Connection.roomPlayers.find(player => player.id == senderId).name : type == 2 ? "Server" : "System";
+        const message = data.readUTF8String();
+        Interface.addChatMessage(sender, message);
     }
 }
 
@@ -360,6 +436,13 @@ class SendActions {
         } else {
             writer.writeUInt8(value);
         }
+        Connection.send(writer.dataView.buffer);
+    }
+    static sendMsg(message, type) {
+        const writer = new Writer(1 + 1 + message.length + 1);
+        writer.writeUInt8(6);
+        writer.writeUInt8(type);
+        writer.writeUTF8String(message);
         Connection.send(writer.dataView.buffer);
     }
 }

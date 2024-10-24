@@ -34,14 +34,14 @@
             <button id="redo">Redo</button>
         </div>
         <div class="guessBox">
-            <h2>Guess the word:</h2>
-            <input type="text" id="guessInput">
+            <h2 id="guessHeader">Guess the word:</h2>
+            <input type="text" id="guessInput" maxlength="32" placeholder="Input your guess here.">
             <button id="submitGuess">Submit</button>
         </div>
         <div class="chatBox">
             <h2>Chat:</h2>
             <textarea id="chatHistory" readonly></textarea>
-            <input type="text" id="chatInput">
+            <input type="text" id="chatInput" maxlength="256" placeholder="Send a message.">
             <button id="sendChat">Send</button>
         </div>
         <div class="canvasBox">

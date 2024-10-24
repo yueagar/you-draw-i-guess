@@ -6,11 +6,11 @@ Done:
 2. Drawing
 3. Room system
 4. Player role assignment
+5. Custom topic and guess system
+6. Chatroom
 
 To-do:
-1. Custom topic and guess system
-2. Chatroom
-3. Admin system
-4. Frontend design
-5. React frontend instead of vanilla static frontend
-6. Account system & Security
+1. Frontend design
+2. Admin system
+3. React frontend instead of vanilla static frontend
+4. Account system & Security
