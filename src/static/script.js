@@ -147,6 +147,7 @@ class Interface {
         });
     }
     static onReconnect() {
+        Connection.clean();
         Connection.connect();
     }
     static onCreateRoom() {
