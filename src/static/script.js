@@ -91,7 +91,6 @@ class Interface {
         // server-related
         this.reconnectButton = document.getElementById("reconnect");
         this.createRoomButton = document.getElementById("createRoom");
-        this.refreshListButton = document.getElementById("refreshList");
         this.roomsList = document.getElementById("roomsList");
         this.playersList = document.getElementById("playersList");
         // draw-related
@@ -158,8 +157,9 @@ class Interface {
     }
     static onRefreshList(type) {
         //console.log(`Refreshed list type ${type}.`);
-        this.clearList(type);
+        //this.clearList(type);
         type & 1 && fetch("/rooms").then(response => response.json()).then(data => {
+            this.clearList(1);
             data.forEach(room => {
                 const li = document.createElement("li");
                 const btn = document.createElement("button");
@@ -175,6 +175,7 @@ class Interface {
             })
         });
         type & 2 && fetch("/players?roomId=" + Connection.roomId).then(response => response.json()).then(data => {
+            this.clearList(2);
             Connection.roomPlayers = [];
             data.forEach(player => {
                 Connection.roomPlayers.push(player);
@@ -223,7 +224,7 @@ class Connection {
         this.roomId = -1;
         this.roomPlayers = [];
         this.role = 0;
-        this.topic = "to be decided";
+        this.topic = "tbd";
         this.connect();
     }
     static connect() {
@@ -245,6 +246,11 @@ class Connection {
     }
     static onClose() {
         this.connected = false;
+        this.playerId = -1;
+        this.roomId = -1;
+        this.roomPlayers = [];
+        this.role = 0;
+        this.topic = "tbd";
         console.log("Disconnected from the server.");
         Interface.addChatMessage("System", "Disconnected from the server.");
         Drawer.clear();
