@@ -147,6 +147,7 @@ class Interface {
         });
     }
     static onReconnect() {
+        Connection.ws.close();
         Connection.connect();
     }
     static onCreateRoom() {
@@ -213,7 +214,7 @@ class Interface {
 
 class Connection {
     static init() {
-        this.address = `ws${location.protocol == "https" ? "s" : ""}://${location.host}`;
+        this.address = `ws${location.protocol == "https:" ? "s" : ""}://${location.host}`;
         this.connected = false;
         this.playerId = -1;
         this.roomId = -1;
