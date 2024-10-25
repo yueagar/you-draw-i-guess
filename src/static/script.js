@@ -15,22 +15,25 @@ class Drawer {
         this.clear();
     }
     static addEventListeners() {
-        this.canvas.addEventListener("mousemove", event => {
+        ["mousemove", "touchmove"].forEach(e => this.canvas.addEventListener(e, event => {
             if (this.clicked && Connection.role & 1) {
+                event.preventDefault();
                 //console.log(1, event.offsetX, event.offsetY);
-                SendActions.sendMouse(1, event.offsetX, event.offsetY);
+                const rect = event.target.getBoundingClientRect();
+                SendActions.sendMouse(1, event.offsetX || event.touches[0].clientX - window.scrollX - rect.left, event.offsetY || event.touches[0].clientY - window.scrollY - rect.top);
             }
-        });
-        this.canvas.addEventListener("mousedown", event => {
+        }));
+        ["mousedown", "touchstart"].forEach(e => this.canvas.addEventListener(e, event => {
             this.clicked = true;
+            event.preventDefault();
             //console.log(2, event.offsetX, event.offsetY);
-            Connection.role & 1 && SendActions.sendMouse(2, event.offsetX, event.offsetY);
-        });
-        document.addEventListener("mouseup", event => {
+            const rect = event.target.getBoundingClientRect();
+            Connection.role & 1 && SendActions.sendMouse(2, event.offsetX || event.touches[0].clientX - window.scrollX - rect.left, event.offsetY || event.touches[0].clientY - window.scrollY - rect.top);        }));
+        ["mouseup", "touchend"].forEach(e => document.addEventListener(e, event => {
             this.clicked = false;
             //console.log(3, event.offsetX, event.offsetY);
-            Connection.role & 1 && SendActions.sendMouse(3, event.offsetX, event.offsetY);
-        });
+            Connection.role & 1 && SendActions.sendMouse(3, event.offsetX || 0, event.offsetY || 0);
+        }));
     }
     static draw(x, y) {
         this.ctx.strokeStyle = this.color;
