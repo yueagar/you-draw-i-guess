@@ -1,12 +1,12 @@
-# you-draw-i-guess {#header}
-###### You draw something, and I try to guess it! {#header}
+# you-draw-i-guess
+###### You draw something, and I try to guess it!
 
 ### Why do I make this project?
 I had a lot of fun playing gartic.io with my friends. I wanted to try to make my own gartic.io and practice my skills on making RESTful APIs and WebSocket servers, manipulating binary data and utilizing HTML Canvas API. Therefore, I made this project. Besides, I recently realized that I still have not submitted a project to get the CS50x certificate so I think I am also going to submit a preliminary version of this project to get the certificate.
 ### How to play?
 Firstly, we have two roles in this game: drawer and guesser. Drawer draws, guesser guesses, and 2 minutes a round. If all guessers guess correctly or 2 minutes have passed, a guesser will become the new drawer and the original drawer will become a guesser so everyone has the chance to show off his/her amazing drawing skills.
 #### Roles
-##### Drawer {.red}
+##### Drawer
 As a drawer, you can decide the topic and draw on the canvas. If the drawers draw clearly and the guessers guess the topic correctly, the drawer gets 1 point for every correct guess. It is much more efficient to gain points as a drawer.
 ##### Guesser
 As a guesser, you observe the drawer's art piece and guess what it is about. You get 1 point if you guess it correctly.
@@ -145,12 +145,3 @@ From a Connection or a Room instance, we can access Listener.
 #### RESTful API
 `GET /rooms`: returns a JSON array of objects (Room instances)
 `GET /players?roomId={id}`: returns a JSON array of objects (Player instances in a certain Room)
-
-<style>
-    #header {
-        text-align: center;
-    }
-    .red {
-        color: red;
-    }
-</style>
