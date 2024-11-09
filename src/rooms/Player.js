@@ -6,6 +6,8 @@ class Player {
         this.connection = connection;
         this.name = "Guest" + (~~(9999 * Math.random()) + 1);
         this.room = null;
+        this.skipTimeout = null;
+        this.becomeDrawerTime = 0;
         this._role = 0; // admin(2nd bit), drawer(1st bit)
         this._pickedColor = 0;
         this._pickedSize = 1;
@@ -19,6 +21,7 @@ class Player {
     }
     normalize() {
         this.role &= ~1;
+        this.becomeDrawerTime = 0;
         this._pickedColor = 0;
         this._pickedSize = 1;
         this._pickedTopic = "to be decided";
@@ -27,6 +30,7 @@ class Player {
         this.clicked = false;
         this.currentActionIndex = -1;
         this.actions = [];
+        clearTimeout(this.skipTimeout);
     }
     onJoinRoom() {
         this.normalize();
@@ -90,10 +94,14 @@ class Player {
         return this._role;
     }
     set role(role) {
-        this._role = role;
-        if (role & 1) {
+        if (role & 1 && !(this._role & 1)) {
             this.pickedTopic = null;
+            this.becomeDrawerTime = Date.now();
+            this.skipTimeout = setTimeout(() => {
+                this.room.skip();
+            }, 120 * 1000);
         }
+        this._role = role;
         const writer = new Writer(1 + 1 + 1);
         writer.writeUint8(5);
         writer.writeUint8(1);

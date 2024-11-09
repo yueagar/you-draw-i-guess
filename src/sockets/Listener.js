@@ -41,6 +41,7 @@ class Listener {
                         _pickedTopic: player._pickedTopic?.replace(/\S/g, "_"),
                         connection: player.id,
                         room: player.room.id,
+                        skipTimeout: !!player.skipTimeout,
                         actions: player.actions.length
                         //actions: player.actions.map(action => ({ "color": action.color, "size": action.size, "points": action.points }))
                     };

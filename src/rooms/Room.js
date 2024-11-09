@@ -12,7 +12,7 @@ class Room {
         this.players.forEach(player => player.connection.ws.send(data));
     }
     sendMsgToAll(message, type, senderId) {
-        const writer = new Writer(1 + 1 + message.length);
+        const writer = new Writer(1 + 1 + message.length + type == 1 && !isNaN(senderId) ? 4 : 0);
         writer.writeUint8(6);
         writer.writeUint8(type);
         type == 1 && !isNaN(senderId) && writer.writeUint32(senderId);

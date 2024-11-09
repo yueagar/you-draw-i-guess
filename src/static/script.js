@@ -11,6 +11,14 @@ class Drawer {
         this.size = 1;
         this.currentActionIndex = 0;
         this.actions = [];
+        this.count = 0;
+        this.countLastReset = 0;
+        this.countInterval = setInterval(() => {
+            if (this.countLastReset + 120 * 1000 - Date.now() > 0) {
+                this.count = Math.max(0, Math.ceil((this.countLastReset + 120 * 1000 - Date.now()) / 1000));
+                Interface.countdown.textContent = `Timeleft: ${this.count}s`;
+            }
+        }, 1000);
         this.addEventListeners();
         this.clear();
     }
@@ -47,7 +55,7 @@ class Drawer {
         this.prevY = y;
     }
     static drawActions() {
-        this.clear();
+        this.clear(true);
         for (let i = 0; i < this.currentActionIndex + 1; i++) {
             this.ctx.strokeStyle = this.convert(this.actions[i].color);
             this.ctx.lineWidth = this.actions[i].size;
@@ -60,7 +68,12 @@ class Drawer {
             this.ctx.closePath();
         }
     }
-    static clear() {
+    static clear(action = false) {
+        if (!action) {
+            this.count = 0;
+            this.countLastReset = 0;
+            Interface.countdown && (Interface.countdown.textContent = "Timeleft: 0s");
+        }
         this.ctx.fillStyle = "#FFFFFF";
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
@@ -94,6 +107,7 @@ class Interface {
         this.roomsList = document.getElementById("roomsList");
         this.playersList = document.getElementById("playersList");
         // draw-related
+        this.countdown = document.getElementById("countdown");
         this.colorPicker = document.getElementById("colorPicker");
         this.sizePicker = document.getElementById("sizePicker");
         this.undoButton = document.getElementById("undo");
@@ -162,14 +176,14 @@ class Interface {
             this.clearList(1);
             data.forEach(room => {
                 const li = document.createElement("li");
+                li.style.textDecoration = room.id == Connection.roomId ? "underline" : "none";
+                li.textContent = `Room ${room.id} [${room.players.length}/8] ${room.id == Connection.roomId ? "(joined)" : ""}`;
+                li.id = `server${room.id}`;
                 const btn = document.createElement("button");
                 btn.textContent = room.id == Connection.roomId ? "Leave" : "Join";
                 btn.addEventListener("click", () => {
                     SendActions.sendRoom(room.id == Connection.roomId ? 3 : 2, room.id);
                 });
-                li.style.textDecoration = room.id == Connection.roomId ? "underline" : "none";
-                li.textContent = `Room ${room.id} [${room.players.length}/8] ${room.id == Connection.roomId ? "(joined)" : ""}`;
-                li.id = `server${room.id}`;
                 li.appendChild(btn);
                 this.roomsList.appendChild(li);
             })
@@ -184,7 +198,17 @@ class Interface {
                 li.style.color = player._role & 1 ? "red" : "black";
                 li.style.fontWeight = player._role & 2 ? "bold" : "normal";
                 li.textContent = `${player.name} #${player.id} [${player.score}] ${player.id == Connection.playerId ? "(you)" : ""}`;
+                li.id = `player${player.id}`;
+                if (Connection.role & 2 && !(player._role & 2) && Connection.playerId != player.id) {
+                    const btn = document.createElement("button");
+                    btn.textContent = "Kick";
+                    btn.addEventListener("click", () => {
+                        SendActions.sendManage(1, player.id);
+                    });
+                    li.appendChild(btn);
+                }
                 this.playersList.appendChild(li);
+                player._role & 1 && (Drawer.countLastReset = player.becomeDrawerTime);
             });
         });
     }
@@ -341,6 +365,14 @@ class MessageReader {
                 Drawer.color = "#000000";
                 Drawer.size = 1;
                 break;
+            case 4:
+                console.log("You have been kicked by the room owner.");
+                Interface.addChatMessage("Server", "You have been kicked by the room owner.");
+                Connection.roomId = -1;
+                Drawer.clear();
+                Drawer.color = "#000000";
+                Drawer.size = 1;
+                break;
             default:
                 break;
         }
@@ -446,6 +478,13 @@ class SendActions {
         } else {
             writer.writeUInt8(value);
         }
+        Connection.send(writer.dataView.buffer);
+    }
+    static sendManage(action, playerId) {
+        const writer = new Writer(1 + 1 + 4);
+        writer.writeUInt8(5);
+        writer.writeUInt8(action);
+        writer.writeUInt32(playerId);
         Connection.send(writer.dataView.buffer);
     }
     static sendMsg(message, type) {

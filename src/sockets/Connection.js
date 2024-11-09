@@ -152,6 +152,20 @@ class Connection {
                 }
                 break;
             case 5: // manage related
+                if (this.player.id < 0) return this.ws.close();
+                if (this.player.role & 2 && this.player.room) { // role == admin ?
+                    const action = reader.readUint8();
+                    const playerId = reader.readUint32();
+                    if (action == 1) { // kick
+                        const player = this.player.room.players.find(player => player.id == playerId);
+                        if (player) {
+                            //console.log(`Player ${this.player.id} kicked player ${player.id}.`);
+                            this.player.room.kick(player, 4);
+                            this.player.room.sendMsgToAll(`The room owner kicked ${player.name} #${player.id}`, 2);
+                            this.listener.sendRoomUpdate();
+                        } else this.sendMsg(`Player #${playerId} not found.`, 2);
+                    }
+                }
                 break;
             case 6: // msg related
                 if (this.player.id < 0) return this.ws.close();
@@ -205,7 +219,7 @@ class Connection {
     }
 
     sendMsg(message, type, senderId) {
-        const writer = new Writer(1 + 1 + message.length);
+        const writer = new Writer(1 + 1 + message.length + type == 1 && !isNaN(senderId) ? 4 : 0);
         writer.writeUint8(6);
         writer.writeUint8(type);
         type == 1 && !isNaN(senderId) && writer.writeUint32(senderId);
