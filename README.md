@@ -120,10 +120,11 @@ From a Connection or a Room instance, we can access Listener.
 | 2 | uint8 | if type == 2: pen size |
 | 2 | utf8-string | if type == 3: topic |
 | 2 | uint16 | if type == 4: current action index |
-| 4 | uint16 | if type == 4: action length |
+| 4 | uint16 | if type == 4: actions.length |
 | ... | ... | loop through actions  |
 | ? | uint32 | color |
 | ? | uint8 | size |
+| ? | uint16 | points.length
 | ... | ... | for each action, loop through points |
 | ? | uint16 | x coordinate |
 | ? | uint16 | y coordinate |
@@ -143,5 +144,5 @@ From a Connection or a Room instance, we can access Listener.
 | 2 or 6 | utf8-string | message |
 
 #### RESTful API
-`GET /rooms`: returns a JSON array of objects (Room instances)
-`GET /players?roomId={id}`: returns a JSON array of objects (Player instances in a certain Room)
+- `GET /rooms`: returns a JSON array of objects (Room instances)
+- `GET /players?roomId={id}`: returns a JSON array of objects (Player instances in a certain Room)

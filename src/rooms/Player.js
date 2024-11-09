@@ -98,7 +98,7 @@ class Player {
             this.pickedTopic = null;
             this.becomeDrawerTime = Date.now();
             this.skipTimeout = setTimeout(() => {
-                this.room.skip();
+                this.room?.skip();
             }, 120 * 1000);
         }
         this._role = role;
